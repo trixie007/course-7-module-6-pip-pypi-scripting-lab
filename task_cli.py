@@ -1,9 +1,8 @@
 import argparse
 import json
 import os
+import requests
 from datetime import datetime
-
-# --- Task 1 & 2: Object-Oriented Design ---
 
 class Task:
     def __init__(self, task_id: int, title: str, completed: bool = False):
@@ -43,8 +42,7 @@ class TaskManager:
         new_task = Task(new_id, title)
         self.tasks.append(new_task)
         self._save_tasks()
-        self._log_action(f"Added Task #{new_id}: '{title}'")
-        print(f"✓ Task successfully added: [{new_id}] {title}")
+        print(f"Task added: [{new_id}] {title}")
 
     def complete_task(self, task_id: int):
         for task in self.tasks:
@@ -54,10 +52,9 @@ class TaskManager:
                     return
                 task.completed = True
                 self._save_tasks()
-                self._log_action(f"Completed Task #{task_id}")
-                print(f"✓ Task #{task_id} marked as complete.")
+                print(f"Task #{task_id} marked as complete.")
                 return
-        print(f"✗ Error: Task with ID {task_id} not found.")
+        print(f"Error: Task with ID {task_id} not found.")
 
     def list_tasks(self):
         if not self.tasks:
@@ -65,36 +62,34 @@ class TaskManager:
             return
         print("\n--- Current Tasks ---")
         for t in self.tasks:
-            status = "✓" if t.completed else " "
+            status = "X" if t.completed else " "
             print(f"[{status}] ID {t.id}: {t.title}")
         print()
 
-    def _log_action(self, action: str):
-        """Step 2 Log Generator: Writes daily log summary to file."""
-        filename = f"log_{datetime.now().strftime('%Y%m%d')}.txt"
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(filename, "a") as f:
-            f.write(f"[{timestamp}] {action}\n")
+    def fetch_remote_sample(self):
+        try:
+            response = requests.get("https://jsonplaceholder.typicode.com/posts/1", timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                print(f"Fetched External Sample Task: {data.get('title')}")
+            else:
+                print("Failed to fetch external sample.")
+        except requests.RequestException as e:
+            print(f"API request failed: {e}")
 
-
-# --- CLI Parser Construction ---
 
 def build_parser():
-    parser = argparse.ArgumentParser(
-        description="A lightweight CLI tool for managing tasks."
-    )
+    parser = argparse.ArgumentParser(description="CLI Task Manager Tool")
     subparsers = parser.add_subparsers(dest="command", help="Available actions")
 
-    # Add Task Command
     add_parser = subparsers.add_parser("add-task", help="Add a new task")
     add_parser.add_argument("--title", required=True, type=str, help="Title of the task")
 
-    # Complete Task Command
-    complete_parser = subparsers.add_parser("complete-task", help="Mark a task as completed")
-    complete_parser.add_argument("--id", required=True, type=int, help="ID of the task to complete")
+    complete_parser = subparsers.add_parser("complete-task", help="Mark a task as complete")
+    complete_parser.add_argument("--id", required=True, type=int, help="Task ID")
 
-    # List Tasks Command
-    subparsers.add_parser("list-tasks", help="Display all tasks")
+    subparsers.add_parser("list-tasks", help="List all tasks")
+    subparsers.add_parser("fetch-sample", help="Fetch remote sample data via requests")
 
     return parser
 
@@ -110,6 +105,8 @@ def main():
         manager.complete_task(args.id)
     elif args.command == "list-tasks":
         manager.list_tasks()
+    elif args.command == "fetch-sample":
+        manager.fetch_remote_sample()
     else:
         parser.print_help()
 
